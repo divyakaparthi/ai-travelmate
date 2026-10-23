@@ -1,32 +1,12 @@
-
-# Dependencies
+@"
 node_modules/
-**/node_modules/
-
-# Build output
 dist/
-**/dist/
-build/
-**/build/
-
-# Environment variables and secrets
 .env
 .env.*
 !.env.example
-**/.env
-**/.env.*
-!**/.env.example
-
-# Logs
 *.log
-npm-debug.log*
-
-# Local database and temporary files
-*.sqlite
-*.db
-*.dump
-
-# OS and editor files
 .DS_Store
-Thumbs.db
-.vscode/
+coverage/
+.venv/
+__pycache__/
+"@ | Set-Content .gitignore
