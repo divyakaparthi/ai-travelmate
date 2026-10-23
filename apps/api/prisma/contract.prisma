@@ -1,0 +1,117 @@
+// use prisma-next
+
+// =====================================================
+// Users
+// =====================================================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  trips     Trip[]
+}
+
+// =====================================================
+// Trips
+// =====================================================
+
+model Trip {
+  id            String   @id @default(uuid())
+  startLocation String?
+  destination   String
+  startDate     DateTime
+  endDate       DateTime
+  budget        Int
+  interests     String?
+  createdAt     DateTime @default(now())
+
+  userId        String
+  user          User @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  itinerary     Itinerary?
+}
+
+// =====================================================
+// Itinerary
+// =====================================================
+
+model Itinerary {
+  id          String   @id @default(uuid())
+  tripId      String   @unique
+  destination String
+  data        String
+  createdAt   DateTime @default(now())
+
+  trip        Trip @relation(
+    fields: [tripId],
+    references: [id],
+    onDelete: Cascade
+}
+
+// =====================================================
+// Places
+// =====================================================
+
+model Place {
+  id                    String   @id @default(uuid())
+  name                  String
+  destination           String
+  description           String
+  location              String?
+  category              String?
+  estimatedCost         String?
+  bestTimeToVisit       String?
+  historicalInformation String?
+  thingsToDo             String?
+  nearbyAttractions     String?
+  imageUrl              String?
+  createdAt             DateTime @default(now())
+
+  @@index([destination])
+}
+
+// =====================================================
+// Hotels
+// =====================================================
+
+model Hotel {
+  id            String   @id @default(uuid())
+  name          String
+  destination   String
+  category      String
+  description   String
+  location      String
+  pricePerNight Int
+  rating        Float
+  amenities     String
+  imageUrl      String?
+  createdAt     DateTime @default(now())
+
+  @@index([destination])
+}
+
+// =====================================================
+// Restaurants
+// =====================================================
+
+model Restaurant {
+  id          String   @id @default(uuid())
+  name        String
+  destination String
+  cuisine     String
+  description String
+  location    String
+  priceRange  String
+  rating      Float
+  specialties String
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  @@index([destination])
+}

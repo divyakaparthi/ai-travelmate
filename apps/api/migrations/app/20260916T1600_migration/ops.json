@@ -1,0 +1,306 @@
+[
+  {
+    "id": "table.user",
+    "label": "Create table \"user\"",
+    "summary": "Creates table \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"user\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"user\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"user\"",
+        "sql": "CREATE TABLE \"public\".\"user\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"email\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"password\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"user\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"user\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.trip.userId",
+    "label": "Add column \"userId\" to \"trip\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "userId",
+        "table": "trip"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"userId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "trip",
+          "userId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"userId\"",
+        "sql": "ALTER TABLE \"public\".\"trip\" ADD COLUMN \"userId\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"userId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "trip",
+          "userId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "backfill.create-system-user",
+    "label": "Create system user for existing trips",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "System user does not already exist",
+        "sql": "\n              SELECT NOT EXISTS (\n                SELECT 1\n                FROM \"public\".\"user\"\n                WHERE \"id\" = '00000000-0000-0000-0000-000000000001'\n              )\n            "
+      }
+    ],
+    "execute": [
+      {
+        "description": "Create system user",
+        "sql": "\n              INSERT INTO \"public\".\"user\"\n                (\"id\", \"email\", \"password\")\n              VALUES\n                (\n                  '00000000-0000-0000-0000-000000000001',\n                  'system@aitravelmate.local',\n                  'migration-placeholder'\n                )\n            "
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "System user exists",
+        "sql": "\n              SELECT EXISTS (\n                SELECT 1\n                FROM \"public\".\"user\"\n                WHERE \"id\" = '00000000-0000-0000-0000-000000000001'\n              )\n            "
+      }
+    ]
+  },
+  {
+    "id": "backfill.trip-userId",
+    "label": "Backfill existing trips with system user",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "Trips without userId exist",
+        "sql": "\n              SELECT EXISTS (\n                SELECT 1\n                FROM \"public\".\"trip\"\n                WHERE \"userId\" IS NULL\n              )\n            "
+      }
+    ],
+    "execute": [
+      {
+        "description": "Assign existing trips to system user",
+        "sql": "\n              UPDATE \"public\".\"trip\"\n              SET \"userId\" = '00000000-0000-0000-0000-000000000001'\n              WHERE \"userId\" IS NULL\n            "
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "All trips have userId",
+        "sql": "\n              SELECT NOT EXISTS (\n                SELECT 1\n                FROM \"public\".\"trip\"\n                WHERE \"userId\" IS NULL\n              )\n            "
+      }
+    ]
+  },
+  {
+    "id": "alterNullability.setNotNull.trip.userId",
+    "label": "Set NOT NULL on \"trip\".\"userId\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "userId",
+        "table": "trip"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"userId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "trip",
+          "userId"
+        ]
+      },
+      {
+        "description": "ensure no NULL values in \"userId\"",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"public\".\"trip\" WHERE \"userId\" IS NULL) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "set NOT NULL on \"userId\"",
+        "sql": "ALTER TABLE \"public\".\"trip\" ALTER COLUMN \"userId\" SET NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"userId\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "trip",
+          "userId",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.user.user_email_key",
+    "label": "Add unique constraint on \"user\" (email)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "user_email_key",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"user_email_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_email_key",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"user_email_key\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD CONSTRAINT \"user_email_key\" UNIQUE (\"email\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"user_email_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_email_key",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.trip.trip_userId_idx_a489d58a",
+    "label": "Create index \"trip_userId_idx_a489d58a\" on \"trip\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "trip_userId_idx_a489d58a",
+        "table": "trip"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"trip_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"trip_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"trip_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"trip_userId_idx_a489d58a\" ON \"public\".\"trip\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"trip_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"trip_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.trip.trip_userId_fkey",
+    "label": "Add foreign key \"trip_userId_fkey\" on \"trip\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "trip_userId_fkey",
+        "table": "trip"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"trip_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "trip_userId_fkey",
+          "public",
+          "\"public\".\"trip\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"trip_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"trip\"\nADD CONSTRAINT \"trip_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"trip_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "trip_userId_fkey",
+          "public",
+          "\"public\".\"trip\""
+        ]
+      }
+    ]
+  }
+]

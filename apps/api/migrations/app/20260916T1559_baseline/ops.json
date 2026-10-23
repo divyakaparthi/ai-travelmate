@@ -1,0 +1,58 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.trip",
+    "label": "Create table \"trip\"",
+    "summary": "Creates table \"trip\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "trip"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"trip\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"trip\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"trip\"",
+        "sql": "CREATE TABLE \"public\".\"trip\" (\n  \"budget\" int4 NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"destination\" text NOT NULL,\n  \"endDate\" timestamptz NOT NULL,\n  \"id\" text NOT NULL,\n  \"interests\" text,\n  \"startDate\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"trip\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"trip\""
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,125 @@
+[
+  {
+    "id": "table.itinerary",
+    "label": "Create table \"itinerary\"",
+    "summary": "Creates table \"itinerary\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "itinerary"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"itinerary\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"itinerary\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"itinerary\"",
+        "sql": "CREATE TABLE \"public\".\"itinerary\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"data\" text NOT NULL,\n  \"destination\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"tripId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"itinerary\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"itinerary\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.itinerary.itinerary_tripId_key",
+    "label": "Add unique constraint on \"itinerary\" (tripId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "itinerary_tripId_key",
+        "table": "itinerary"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"itinerary_tripId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "itinerary_tripId_key",
+          "public",
+          "\"public\".\"itinerary\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"itinerary_tripId_key\"",
+        "sql": "ALTER TABLE \"public\".\"itinerary\" ADD CONSTRAINT \"itinerary_tripId_key\" UNIQUE (\"tripId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"itinerary_tripId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "itinerary_tripId_key",
+          "public",
+          "\"public\".\"itinerary\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.itinerary.itinerary_tripId_fkey",
+    "label": "Add foreign key \"itinerary_tripId_fkey\" on \"itinerary\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "itinerary_tripId_fkey",
+        "table": "itinerary"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"itinerary_tripId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "itinerary_tripId_fkey",
+          "public",
+          "\"public\".\"itinerary\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"itinerary_tripId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"itinerary\"\nADD CONSTRAINT \"itinerary_tripId_fkey\"\nFOREIGN KEY (\"tripId\")\nREFERENCES \"public\".\"trip\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"itinerary_tripId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "itinerary_tripId_fkey",
+          "public",
+          "\"public\".\"itinerary\""
+        ]
+      }
+    ]
+  }
+]
