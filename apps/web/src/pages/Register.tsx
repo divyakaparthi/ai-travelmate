@@ -48,10 +48,10 @@ export default function Register() {
     try {
       setLoading(true);
 
-      const result = await register(
-        email.trim(),
-        password
-      );
+      const result = await register({
+  email: email.trim(),
+  password: password,
+});
 
       if (result?.token) {
         localStorage.setItem("token", result.token);
